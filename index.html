@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Wall/Elevation Report Generator</title>
+<style>
+  :root{
+    --ink:#20242b;
+    --paper:#fbfaf7;
+    --card:#ffffff;
+    --line:#e3e0d8;
+    --accent-purple:#6a3fa0;
+    --accent-red:#c2372e;
+    --accent-orange:#e8703a;
+    --muted:#6b7280;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    padding:28px 20px 80px;
+  }
+  .wrap{max-width:960px;margin:0 auto;}
+  header.top{
+    display:flex;align-items:center;gap:16px;margin-bottom:28px;
+    border-bottom:2px solid var(--ink);padding-bottom:16px;
+  }
+  header.top img{height:44px;display:block;}
+  header.top .titles h1{margin:0;font-size:22px;letter-spacing:0.3px;}
+  header.top .titles p{margin:2px 0 0;color:var(--muted);font-size:13px;}
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:20px 22px;
+    margin-bottom:20px;
+  }
+  .card h2{
+    margin:0 0 4px;font-size:15px;text-transform:uppercase;letter-spacing:0.8px;
+    color:var(--accent-purple);
+  }
+  .card .sub{margin:0 0 16px;font-size:12px;color:var(--muted);}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  label{display:block;font-size:12px;font-weight:600;color:#3d4149;margin-bottom:4px;}
+  input[type=text],input[type=number]{
+    width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;
+    font-size:13px;background:#fff;color:var(--ink);
+  }
+  input[type=text]:focus,input[type=number]:focus{outline:2px solid var(--accent-purple);outline-offset:1px;}
+  .field{margin-bottom:12px;}
+  .filebtn{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:8px 14px;border:1px dashed #b8b3a6;border-radius:8px;
+    background:#faf9f6;cursor:pointer;font-size:12px;font-weight:600;color:#3d4149;
+  }
+  .filebtn:hover{border-color:var(--accent-purple);color:var(--accent-purple);}
+  .filebtn input{display:none;}
+  .preview-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;}
+  .thumb{position:relative;width:90px;height:68px;border-radius:6px;overflow:hidden;border:1px solid var(--line);}
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+  .thumb button{
+    position:absolute;top:2px;right:2px;width:18px;height:18px;border:none;border-radius:50%;
+    background:rgba(0,0,0,.6);color:#fff;font-size:11px;line-height:1;cursor:pointer;
+  }
+  .elev-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .elev-header .name{font-weight:700;font-size:15px;color:var(--ink);}
+  .elev-header .compass-tag{
+    font-size:11px;background:#f1ecfa;color:var(--accent-purple);padding:3px 8px;border-radius:20px;font-weight:600;
+  }
+  table.walls{width:100%;border-collapse:collapse;margin-top:12px;font-size:12.5px;}
+  table.walls th{
+    background:#f4f0fa;color:var(--accent-purple);font-weight:700;text-align:center;
+    padding:7px 6px;border:1px solid var(--line);font-size:11.5px;
+  }
+  table.walls td{padding:5px 6px;border:1px solid var(--line);text-align:center;}
+  table.walls td input{width:100%;border:none;background:transparent;text-align:center;font-size:12.5px;color:var(--accent-red);font-weight:600;padding:4px;}
+  table.walls td input:focus{outline:1px solid var(--accent-purple);border-radius:4px;}
+  table.walls td.letter-cell input{color:var(--ink);}
+  .rowbtns{display:flex;gap:8px;margin-top:10px;}
+  .btn{border:none;border-radius:7px;padding:8px 14px;font-size:12.5px;font-weight:600;cursor:pointer;}
+  .btn.add{background:#eef2ff;color:#3730a3;}
+  .btn.remove{background:#fdecec;color:var(--accent-red);}
+  .oblique-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .oblique-cell{border:1px solid var(--line);border-radius:8px;padding:12px;}
+  .oblique-cell h3{margin:0 0 8px;font-size:13px;color:var(--ink);}
+  .oblique-cell .status{font-size:11px;color:var(--muted);margin-top:6px;}
+  .summary-box{
+    background:#fbf8f2;border:1px solid #ecd9c2;border-radius:8px;padding:14px 16px;font-size:12.5px;
+    display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;
+  }
+  .summary-box b{color:var(--accent-orange);}
+  .generate-bar{
+    position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);
+    padding:14px 20px;display:flex;justify-content:center;gap:12px;align-items:center;
+    box-shadow:0 -4px 14px rgba(0,0,0,.05);
+  }
+  .generate-bar button{
+    background:var(--accent-purple);color:#fff;border:none;padding:12px 26px;border-radius:8px;
+    font-size:14px;font-weight:700;cursor:pointer;letter-spacing:0.3px;
+  }
+  .generate-bar button:hover{background:#5a3488;}
+  .generate-bar button.btn-startover{
+    background:#fff;color:var(--accent-red);border:1.5px solid var(--accent-red);padding:11px 22px;
+  }
+  .generate-bar button.btn-startover:hover{background:#fdecec;}
+  .generate-bar .status-msg{font-size:12.5px;color:var(--muted);}
+  .thumb-single{width:130px;height:90px;}
+  .xlsx-import-btn{padding:5px 8px;font-size:10.5px;white-space:nowrap;}
+  .rowRemoveBtn{padding:4px 8px;font-size:12px;line-height:1;}
+  .note{font-size:11.5px;color:var(--muted);background:#f4f0fa;border-radius:6px;padding:8px 10px;margin-top:10px;}
+
+  /* ---- PRINT REPORT STYLES (only visible in #printArea, only rendered on print) ---- */
+  #printArea{ display:none; }
+  .rep-page{
+    width:100%; min-height:9.8in; border:1.5px solid #000; padding:22px 30px 30px;
+    page-break-after:always; position:relative; box-sizing:border-box;
+    font-family: Georgia, 'Times New Roman', serif; color:#111; background:#fff;
+  }
+  .rep-page:last-child{ page-break-after:auto; }
+  .ph-top{ display:flex; justify-content:space-between; align-items:flex-start; }
+  .ph-logo{ height:46px; }
+  .ph-pagenum{ font-family: Arial, sans-serif; font-size:11px; font-weight:bold; }
+  .ph-rule-only{ border-top:1px solid #999; margin-top:14px; }
+  .ph-title-wrap{ border-top:1px solid #999; border-bottom:1px solid #999; margin-top:14px; padding:14px 0; }
+  .ph-title{ text-align:center; font-size:30px; color:#6a3fa0; letter-spacing:1px; font-weight:400; }
+  .ph-subtitle{ text-align:center; font-size:17px; color:#c2372e; margin:14px 0 6px; font-family: Arial, sans-serif; }
+  .rep-summary-body{ text-align:center; margin-top:18px; }
+  .rep-aerial-img{ max-width:300px; max-height:220px; display:block; margin:0 auto 14px; }
+  .rep-address{ font-size:17px; font-weight:bold; font-family: Arial, sans-serif; }
+  .rep-address-sub{ font-size:11px; color:#333; font-family: Arial, sans-serif; margin-top:2px; }
+  .rep-bullets{ list-style:none; text-align:left; max-width:480px; margin:26px auto 0; padding:0; font-family: Arial, sans-serif; font-size:12.5px; }
+  .rep-bullets li{ margin:9px 0; padding-left:18px; position:relative; }
+  .rep-bullets li:before{ content:''; position:absolute; left:0; top:5px; border-top:5px solid transparent; border-bottom:5px solid transparent; border-left:8px solid #c2372e; }
+  .rep-elev-body{ margin-top:16px; font-family: Arial, sans-serif; }
+  .rep-order-line{ font-size:11.5px; margin-bottom:6px; }
+  .rep-diagram-wrap{ text-align:center; margin:16px 0; }
+  .rep-diagram-img{ max-width:460px; max-height:190px; }
+  table.rep-walls{ width:100%; border-collapse:collapse; margin-top:14px; font-size:11.5px; }
+  table.rep-walls th{ background:#f4f0fa; color:#6a3fa0; border:1px solid #999; padding:6px 4px; font-weight:bold; }
+  table.rep-walls td{ border:1px solid #999; padding:5px 4px; text-align:center; color:#c2372e; font-weight:bold; }
+  .rep-compass{ position:absolute; bottom:28px; left:36px; }
+  .rep-photos-body{ text-align:center; margin-top:80px; }
+  .rep-photo-img{ max-width:480px; max-height:230px; display:block; margin:0 auto 20px; }
+  .rep-oblique-grid{ display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:0; margin-top:20px; height:8.6in; font-family: Arial, sans-serif; }
+  .rep-oblique-cell{ border:1px solid #000; padding:10px; display:flex; flex-direction:column; align-items:center; }
+  .rep-oblique-label{ font-weight:bold; font-size:12px; margin-bottom:10px; }
+  .rep-oblique-content{ flex:1; display:flex; align-items:center; justify-content:center; width:100%; }
+  .rep-oblique-img{ max-width:95%; max-height:95%; }
+  .rep-no-oblique{ font-weight:bold; font-size:14px; text-align:center; }
+
+  @media print {
+    @page { size: letter; margin: 0.35in; }
+    body > *:not(#printArea){ display:none !important; }
+    #printArea{ display:block !important; }
+    .generate-bar{ display:none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <img src="data:image/jpeg;base64,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" alt="logo">
+    <div class="titles">
+      <h1>Wall / Elevation Report Generator</h1>
+      <p>Fill in the measurements from Xactimate, upload the diagrams and photos, then generate the branded PDF via your browser's print dialog (no external services required).</p>
+    </div>
+  </header>
+
+  <div class="card">
+    <h2>Property &amp; Order Info</h2>
+    <p class="sub">Shown on the Summary page.</p>
+    <div class="grid2">
+      <div class="field"><label>Street Address</label><input type="text" id="addr1" placeholder="485 Dillman Spring Way NE"></div>
+      <div class="field"><label>City, State ZIP</label><input type="text" id="addr2" placeholder="Corydon, IN 47112"></div>
+      <div class="field"><label>Country</label><input type="text" id="addr3" placeholder="USA"></div>
+      <div class="field"><label>Order ID</label><input type="text" id="orderId" placeholder="P888492618"></div>
+      <div class="field"><label>Claim Number</label><input type="text" id="claimNumber" placeholder="HENSLEY"></div>
+    </div>
+    <label>Aerial / Satellite Image</label>
+    <label class="filebtn">Upload image<input type="file" accept="image/*" id="aerialInput"></label>
+    <div class="preview-row" id="aerialPreview"></div>
+  </div>
+
+  <div id="elevationsContainer"></div>
+
+  <div class="card">
+    <h2>Property Photos</h2>
+    <p class="sub">One or more photos of the property (Page 6 in the reference report).</p>
+    <label class="filebtn">Add photo(s)<input type="file" accept="image/*" multiple id="photosInput"></label>
+    <div class="preview-row" id="photosPreview"></div>
+  </div>
+
+  <div class="card">
+    <h2>Oblique Imagery</h2>
+    <p class="sub">Upload an oblique image per direction, or leave blank to show "NO OBLIQUES AVAILABLE".</p>
+    <div class="oblique-grid" id="obliqueGrid"></div>
+  </div>
+
+  <div class="card">
+    <h2>Calculated Summary (auto)</h2>
+    <p class="sub">These totals are computed automatically from your elevation tables and placed on the Summary page.</p>
+    <div class="summary-box" id="summaryBox"></div>
+  </div>
+</div>
+
+<div class="generate-bar">
+  <span class="status-msg" id="statusMsg"></span>
+  <button id="generateBtn">Generate PDF</button>
+  <button id="startOverBtn" class="btn-startover">Start Over</button>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+const ELEVATIONS_META = [
+  {key:'front', name:'Front/Street Facing', rotation:0},
+  {key:'right', name:'Right Facing', rotation:90},
+  {key:'back',  name:'Back Facing', rotation:180},
+  {key:'left',  name:'Left Facing', rotation:270}
+];
+const DIRECTIONS = ['North','South','East','West'];
+const LOGO_DATAURL = "data:image/jpeg;base64,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";
+
+let state = {
+  addr1:'', addr2:'', addr3:'', orderId:'', claimNumber:'',
+  aerial: null,
+  elevations: ELEVATIONS_META.map(m => ({
+    key:m.key, name:m.name, rotation:m.rotation,
+    diagram: null,
+    walls: [ blankWall('A') ]
+  })),
+  photos: [],
+  obliques: {North:null, South:null, East:null, West:null}
+};
+
+function blankWall(letter){
+  return {letter: letter||'', wallArea:'', wdArea:'', wdPerimeter:'', wdCount:'', pc:''};
+}
+function nextLetter(existing){
+  const used = existing.map(w=>w.letter).filter(Boolean);
+  for(let i=0;i<26;i++){
+    const c = String.fromCharCode(65+i);
+    if(!used.includes(c)) return c;
+  }
+  return '';
+}
+function readImageFile(file, cb){
+  const reader = new FileReader();
+  reader.onload = e=>{
+    const img = new Image();
+    img.onload = ()=> cb({dataUrl:e.target.result, w:img.naturalWidth, h:img.naturalHeight});
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function renderAerialPreview(){
+  const el = document.getElementById('aerialPreview');
+  el.innerHTML = '';
+  if(state.aerial){
+    const div = document.createElement('div');
+    div.className='thumb thumb-single';
+    div.innerHTML = `<img src="${state.aerial.dataUrl}"><button onclick="removeAerial()">x</button>`;
+    el.appendChild(div);
+  }
+}
+function removeAerial(){ state.aerial=null; renderAerialPreview(); }
+
+function renderElevations(){
+  const container = document.getElementById('elevationsContainer');
+  container.innerHTML = '';
+  state.elevations.forEach((elev, idx)=>{
+    const card = document.createElement('div');
+    card.className='card';
+    card.innerHTML = `
+      <div class="elev-header">
+        <div class="name">${elev.name}</div>
+        <div class="compass-tag">Facing rotation: ${elev.rotation}&deg;</div>
+      </div>
+      <label class="filebtn">Upload diagram image<input type="file" accept="image/*" class="diagramInput" data-idx="${idx}"></label>
+      <div class="preview-row diagramPreview" data-idx="${idx}"></div>
+      <table class="walls">
+        <thead><tr>
+          <th style="width:9%">Wall</th>
+          <th style="width:17%">Wall area (F)</th>
+          <th style="width:17%">Window &amp; Door area (SF)</th>
+          <th style="width:19%">Window &amp; Door perimeter (LF)</th>
+          <th style="width:11%">Window &amp; Door count</th>
+          <th style="width:8%">Wall Perim. (PC)</th>
+          <th style="width:13%">Xactimate CSV</th>
+          <th style="width:6%"></th>
+        </tr></thead>
+        <tbody class="wallRows" data-idx="${idx}"></tbody>
+      </table>
+      <div class="rowbtns">
+        <button class="btn add" data-idx="${idx}">+ Add wall row</button>
+      </div>
+      <div class="note">Tip: export each wall's Xactimate variables as <b>CSV</b> (not .xlsx) and use "Xactimate CSV" per row to auto-fill Wall area, Window &amp; Door area/perimeter/count, and PC.</div>
+    `;
+    container.appendChild(card);
+    renderDiagramPreview(idx);
+    renderWallRows(idx);
+  });
+
+  container.querySelectorAll('.diagramInput').forEach(inp=>{
+    inp.addEventListener('change', e=>{
+      const idx = +e.target.dataset.idx;
+      const file = e.target.files[0];
+      if(file) readImageFile(file, img=>{ state.elevations[idx].diagram = img; renderDiagramPreview(idx); });
+    });
+  });
+  container.querySelectorAll('.btn.add').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const idx = +e.target.dataset.idx;
+      const walls = state.elevations[idx].walls;
+      walls.push(blankWall(nextLetter(walls)));
+      renderWallRows(idx);
+      updateSummary();
+    });
+  });
+}
+
+function renderDiagramPreview(idx){
+  const el = document.querySelector(`.diagramPreview[data-idx="${idx}"]`);
+  const elev = state.elevations[idx];
+  el.innerHTML = '';
+  if(elev.diagram){
+    const div = document.createElement('div');
+    div.className='thumb thumb-single';
+    div.innerHTML = `<img src="${elev.diagram.dataUrl}"><button onclick="removeDiagram(${idx})">x</button>`;
+    el.appendChild(div);
+  }
+}
+function removeDiagram(idx){ state.elevations[idx].diagram=null; renderDiagramPreview(idx); }
+
+function renderWallRows(idx){
+  const tbody = document.querySelector(`.wallRows[data-idx="${idx}"]`);
+  const walls = state.elevations[idx].walls;
+  tbody.innerHTML = '';
+  walls.forEach((w, ridx)=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="letter-cell"><input type="text" maxlength="2" value="${w.letter}" data-field="letter"></td>
+      <td><input type="number" step="any" value="${w.wallArea}" data-field="wallArea"></td>
+      <td><input type="number" step="any" value="${w.wdArea}" data-field="wdArea"></td>
+      <td><input type="number" step="any" value="${w.wdPerimeter}" data-field="wdPerimeter"></td>
+      <td><input type="number" step="any" value="${w.wdCount}" data-field="wdCount"></td>
+      <td><input type="number" step="any" value="${w.pc}" data-field="pc"></td>
+      <td>
+        <label class="filebtn xlsx-import-btn">Import CSV<input type="file" accept=".csv,.txt" class="xactImport" data-elev="${idx}" data-row="${ridx}"></label>
+      </td>
+      <td><button class="btn remove rowRemoveBtn" data-elev="${idx}" data-row="${ridx}" title="Remove this wall row">&#10005;</button></td>
+    `;
+    tr.querySelectorAll('input[data-field]').forEach(inp=>{
+      inp.addEventListener('input', e=>{
+        walls[ridx][e.target.dataset.field] = e.target.value;
+        updateSummary();
+      });
+    });
+    tr.querySelector('.rowRemoveBtn').addEventListener('click', e=>{
+      const elevIdx = +e.target.dataset.elev;
+      const rowIdx = +e.target.dataset.row;
+      state.elevations[elevIdx].walls.splice(rowIdx, 1);
+      renderWallRows(elevIdx);
+      updateSummary();
+    });
+    tr.querySelector('.xactImport').addEventListener('change', e=>{
+      const file = e.target.files[0];
+      if(!file) return;
+      parseXactimateCSV(file, parsed=>{
+        Object.assign(walls[ridx], parsed);
+        renderWallRows(idx);
+        updateSummary();
+      }, err=>{
+        alert('Could not read that CSV file: '+err);
+      });
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+function parseXactimateCSV(file, onDone, onError){
+  const reader = new FileReader();
+  reader.onload = e=>{
+    try{
+      const text = e.target.result;
+      const lines = text.split(/\r?\n/).filter(l=>l.trim().length>0);
+      const delim = lines[0].indexOf('\t')>-1 ? '\t' : ',';
+      const map = {};
+      lines.forEach(line=>{
+        const cells = line.split(delim).map(c=>c.trim().replace(/^"|"$/g,''));
+        if(cells.length<3) return;
+        const code = cells[0];
+        const val = parseFloat(cells[2]);
+        if(code && !isNaN(val)) map[code]=val;
+      });
+      const wallArea = (map['F'] !== undefined) ? map['F'] : (map['F0'] !== undefined ? map['F0'] : 0);
+      const pc = (map['PC'] !== undefined) ? map['PC'] : (map['PC0'] !== undefined ? map['PC0'] : 0);
+      let wdArea = 0, wdPerimeter = 0;
+      const sfaIdx = new Set(), lfaIdx = new Set();
+      Object.keys(map).forEach(k=>{
+        let m;
+        if((m = k.match(/^SFA(\d+)$/))){ wdArea += map[k]; sfaIdx.add(m[1]); }
+        if((m = k.match(/^LFA(\d+)$/))){ wdPerimeter += map[k]; lfaIdx.add(m[1]); }
+      });
+      const wdCount = Math.max(sfaIdx.size, lfaIdx.size);
+      onDone({
+        wallArea: round2(wallArea),
+        wdArea: round2(wdArea),
+        wdPerimeter: round2(wdPerimeter),
+        wdCount: wdCount,
+        pc: round2(pc)
+      });
+    }catch(err){
+      onError(err.message || String(err));
+    }
+  };
+  reader.onerror = ()=> onError('file read error');
+  reader.readAsText(file);
+}
+function round2(n){ return Math.round((n+Number.EPSILON)*100)/100; }
+
+function renderPhotos(){
+  const el = document.getElementById('photosPreview');
+  el.innerHTML='';
+  state.photos.forEach((p, i)=>{
+    const div = document.createElement('div');
+    div.className='thumb';
+    div.innerHTML = `<img src="${p.dataUrl}"><button onclick="removePhoto(${i})">x</button>`;
+    el.appendChild(div);
+  });
+}
+function removePhoto(i){ state.photos.splice(i,1); renderPhotos(); }
+
+function renderObliques(){
+  const grid = document.getElementById('obliqueGrid');
+  grid.innerHTML = '';
+  DIRECTIONS.forEach(dir=>{
+    const cell = document.createElement('div');
+    cell.className='oblique-cell';
+    const has = !!state.obliques[dir];
+    cell.innerHTML = `
+      <h3>${dir}</h3>
+      <label class="filebtn">Upload image<input type="file" accept="image/*" class="obliqueInput" data-dir="${dir}"></label>
+      <div class="preview-row obliquePreview" data-dir="${dir}"></div>
+      <div class="status">${has ? '' : 'Will show: NO OBLIQUES AVAILABLE'}</div>
+    `;
+    grid.appendChild(cell);
+    if(has){
+      const prev = cell.querySelector('.obliquePreview');
+      const div = document.createElement('div');
+      div.className='thumb thumb-single';
+      div.innerHTML = `<img src="${state.obliques[dir].dataUrl}"><button onclick="removeOblique('${dir}')">x</button>`;
+      prev.appendChild(div);
+    }
+  });
+  grid.querySelectorAll('.obliqueInput').forEach(inp=>{
+    inp.addEventListener('change', e=>{
+      const dir = e.target.dataset.dir;
+      const file = e.target.files[0];
+      if(file) readImageFile(file, img=>{ state.obliques[dir]=img; renderObliques(); });
+    });
+  });
+}
+function removeOblique(dir){ state.obliques[dir]=null; renderObliques(); }
+
+function num(v){ const n=parseFloat(v); return isNaN(n)?0:n; }
+
+function updateSummary(){
+  let totalWallArea=0, totalFacets=0, totalWdArea=0, totalWdCount=0, totalWdPerimeter=0, totalPc=0;
+  state.elevations.forEach(elev=>{
+    elev.walls.forEach(w=>{
+      if(w.letter===''&&w.wallArea===''&&w.wdArea===''&&w.wdPerimeter===''&&w.wdCount===''&&w.pc==='') return;
+      totalWallArea += num(w.wallArea);
+      totalFacets += 1;
+      totalWdArea += num(w.wdArea);
+      totalWdCount += num(w.wdCount);
+      totalWdPerimeter += num(w.wdPerimeter);
+      totalPc += num(w.pc);
+    });
+  });
+  const box = document.getElementById('summaryBox');
+  box.innerHTML = `
+    <div>Total wall area: <b>${totalWallArea.toFixed(2)} Sq. ft</b></div>
+    <div>Total wall facets: <b>${totalFacets}</b></div>
+    <div>Total window &amp; door area: <b>${totalWdArea.toFixed(2)} Sq. ft</b></div>
+    <div>Total window and doors: <b>${totalWdCount}</b></div>
+    <div>Wall area with windows and doors: <b>${(totalWallArea+totalWdArea).toFixed(2)} Sq. ft</b></div>
+    <div>Window and door perimeter: <b>${totalWdPerimeter.toFixed(2)}</b></div>
+    <div>Wall perimeter: <b>${totalPc.toFixed(2)}</b></div>
+  `;
+  return {totalWallArea,totalFacets,totalWdArea,totalWdCount,totalWdPerimeter,totalPc};
+}
+
+['addr1','addr2','addr3','orderId','claimNumber'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', e=>{ state[id]=e.target.value; });
+});
+document.getElementById('aerialInput').addEventListener('change', e=>{
+  const file = e.target.files[0];
+  if(file) readImageFile(file, img=>{ state.aerial=img; renderAerialPreview(); });
+});
+document.getElementById('photosInput').addEventListener('change', e=>{
+  const files = Array.from(e.target.files);
+  files.forEach(f=> readImageFile(f, img=>{ state.photos.push(img); renderPhotos(); }));
+});
+
+renderElevations();
+renderPhotos();
+renderObliques();
+updateSummary();
+
+// ---------- PRINT-BASED REPORT (no external libraries, prints in-page) ----------
+function esc(s){
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function compassSVG(rotationDeg){
+  return `
+  <svg viewBox="0 0 120 120" width="80" height="80">
+    <g transform="rotate(${rotationDeg} 60 60)">
+      <polygon points="60,8 68,52 60,60 52,52" fill="#111"/>
+      <polygon points="112,60 68,68 60,60 68,52" fill="#333"/>
+      <polygon points="60,112 52,68 60,60 68,68" fill="#333"/>
+      <polygon points="8,60 52,52 60,60 52,68" fill="#333"/>
+      <circle cx="60" cy="60" r="5" fill="none" stroke="#555" stroke-width="1.5"/>
+      <text x="60" y="4" text-anchor="middle" font-size="13" font-weight="bold" font-family="Arial">N</text>
+      <text x="119" y="64" text-anchor="middle" font-size="10" font-family="Arial">E</text>
+      <text x="60" y="122" text-anchor="middle" font-size="10" font-family="Arial">S</text>
+      <text x="1" y="64" text-anchor="middle" font-size="10" font-family="Arial">W</text>
+    </g>
+  </svg>`;
+}
+
+function pageHeader(pageNum, title, subtitle){
+  return `
+    <div class="ph-top">
+      <img src="${LOGO_DATAURL}" class="ph-logo">
+      <div class="ph-pagenum">Page ${pageNum}</div>
+    </div>
+    ${title ? `
+    <div class="ph-title-wrap">
+      <div class="ph-title">${esc(title)}</div>
+    </div>
+    ${subtitle ? `<div class="ph-subtitle">${esc(subtitle)}</div>` : ''}
+    ` : '<div class="ph-rule-only"></div>'}
+  `;
+}
+
+function wallsTableHtml(walls){
+  const rows = walls.map(w=>`
+    <tr>
+      <td>${esc(w.letter)}</td>
+      <td>${num(w.wallArea).toFixed(2)}</td>
+      <td>${num(w.wdArea).toFixed(2)}</td>
+      <td>${num(w.wdPerimeter).toFixed(2)}</td>
+      <td>${String(num(w.wdCount)).padStart(2,'0')}</td>
+    </tr>
+  `).join('');
+  return `
+    <table class="rep-walls">
+      <thead><tr>
+        <th>Wall</th><th>Wall area</th><th>Window and<br>Door area</th><th>Window and<br>door perimeter</th><th>Window and<br>Door count</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+function buildReportPagesHtml(){
+  const totals = updateSummary();
+  let pageNum = 1;
+  let pages = '';
+
+  pages += `
+  <div class="rep-page">
+    ${pageHeader(pageNum, 'WALL/ELEVATION REPORT', 'Summary Page')}
+    <div class="rep-summary-body">
+      ${state.aerial ? `<img class="rep-aerial-img" src="${state.aerial.dataUrl}">` : ''}
+      <div class="rep-address">${esc(state.addr1)}</div>
+      <div class="rep-address-sub">${esc(state.addr2)}</div>
+      <div class="rep-address-sub">${esc(state.addr3)}</div>
+      <ul class="rep-bullets">
+        <li>ID: <b>${esc(state.orderId)}</b></li>
+        <li>Claim number: ${esc(state.claimNumber)}</li>
+        <li>Total wall area = ${totals.totalWallArea.toFixed(0)} Sq. ft</li>
+        <li>Total wall facets = ${totals.totalFacets}</li>
+        <li>Total window &amp; door area = ${totals.totalWdArea.toFixed(0)} Sq. ft.</li>
+        <li>Total window and doors = ${totals.totalWdCount}</li>
+        <li>Wall area with windows and doors = ${(totals.totalWallArea+totals.totalWdArea).toFixed(0)} Sq. ft.</li>
+        <li>Window and door perimeter = ${totals.totalWdPerimeter.toFixed(0)}</li>
+        <li>Wall perimeter = ${totals.totalPc.toFixed(0)}</li>
+      </ul>
+    </div>
+  </div>`;
+
+  state.elevations.forEach(elev=>{
+    pageNum++;
+    const validWalls = elev.walls.filter(w=> !(w.letter===''&&w.wallArea===''&&w.wdArea===''&&w.wdPerimeter===''&&w.wdCount===''&&w.pc===''));
+    pages += `
+    <div class="rep-page">
+      ${pageHeader(pageNum, 'WALL/ELEVATION REPORT', elev.name)}
+      <div class="rep-elev-body">
+        <div class="rep-order-line">Order ID: ${esc(state.orderId)}</div>
+        <div class="rep-order-line">Claim Number: ${esc(state.claimNumber)}</div>
+        ${elev.diagram ? `<div class="rep-diagram-wrap"><img class="rep-diagram-img" src="${elev.diagram.dataUrl}"></div>` : ''}
+        ${wallsTableHtml(validWalls)}
+        <div class="rep-compass">${compassSVG(elev.rotation)}</div>
+      </div>
+    </div>`;
+  });
+
+  pageNum++;
+  pages += `
+  <div class="rep-page">
+    ${pageHeader(pageNum, null, null)}
+    <div class="rep-photos-body">
+      ${state.photos.map(p=>`<img class="rep-photo-img" src="${p.dataUrl}">`).join('')}
+    </div>
+  </div>`;
+
+  pageNum++;
+  pages += `
+  <div class="rep-page">
+    ${pageHeader(pageNum, null, null)}
+    <div class="rep-oblique-grid">
+      ${DIRECTIONS.map(dir=>{
+        const obl = state.obliques[dir];
+        return `
+        <div class="rep-oblique-cell">
+          <div class="rep-oblique-label">${dir}</div>
+          <div class="rep-oblique-content">
+            ${obl ? `<img class="rep-oblique-img" src="${obl.dataUrl}">` : `<div class="rep-no-oblique">NO OBLIQUES AVAILABLE</div>`}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+
+  return pages;
+}
+
+function generatePdf(){
+  const statusMsg = document.getElementById('statusMsg');
+  statusMsg.style.color = '';
+  try{
+    const pagesHtml = buildReportPagesHtml();
+    const printArea = document.getElementById('printArea');
+    printArea.innerHTML = pagesHtml;
+    statusMsg.textContent = 'Opening print dialog — choose "Save as PDF" as the destination.';
+    setTimeout(()=>{
+      window.print();
+      setTimeout(()=> statusMsg.textContent='', 5000);
+    }, 100);
+  }catch(err){
+    console.error('Report generation failed:', err);
+    statusMsg.style.color = '#c2372e';
+    statusMsg.textContent = 'Failed: ' + (err.message || err);
+    alert('Report generation failed:\n\n' + (err.message || err));
+  }
+}
+
+document.getElementById('generateBtn').addEventListener('click', generatePdf);
+
+// ---------- START OVER ----------
+function resetAll(){
+  const ok = confirm('Start a new report?\n\nThis clears all fields, images, and wall data you\'ve entered so far. This cannot be undone.');
+  if(!ok) return;
+
+  state = {
+    addr1:'', addr2:'', addr3:'', orderId:'', claimNumber:'',
+    aerial: null,
+    elevations: ELEVATIONS_META.map(m => ({
+      key:m.key, name:m.name, rotation:m.rotation,
+      diagram: null,
+      walls: [ blankWall('A') ]
+    })),
+    photos: [],
+    obliques: {North:null, South:null, East:null, West:null}
+  };
+
+  ['addr1','addr2','addr3','orderId','claimNumber'].forEach(id=>{
+    document.getElementById(id).value = '';
+  });
+  ['aerialInput','photosInput'].forEach(id=>{
+    document.getElementById(id).value = '';
+  });
+
+  const printArea = document.getElementById('printArea');
+  printArea.innerHTML = '';
+  const statusMsg = document.getElementById('statusMsg');
+  statusMsg.style.color = '';
+  statusMsg.textContent = '';
+
+  renderAerialPreview();
+  renderElevations();
+  renderPhotos();
+  renderObliques();
+  updateSummary();
+
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+document.getElementById('startOverBtn').addEventListener('click', resetAll);
+</script>
+</body>
+</html>
